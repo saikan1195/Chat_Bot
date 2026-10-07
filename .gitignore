@@ -2,3 +2,4 @@ chatbot_env/
 __pycache__/
 *.pyc
 .env
+chat_history.json

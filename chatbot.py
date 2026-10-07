@@ -1,4 +1,5 @@
 import os
+import json
 from openai import OpenAI
 from transformers import pipeline
 import requests
@@ -17,6 +18,26 @@ chatbot = pipeline("text-generation", model="EleutherAI/gpt-neo-1.3B")
 # OpenWeatherMap API details
 API_KEY = "your_openweathermap_api_key"
 BASE_URL = "http://api.openweathermap.org/data/2.5/weather"
+HISTORY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chat_history.json")
+
+try:
+    with open(HISTORY_FILE, "r", encoding="utf-8") as history_file:
+        saved_history = json.load(history_file)
+    if isinstance(saved_history, list):
+        chat_history = [
+            exchange for exchange in saved_history
+            if isinstance(exchange, dict)
+            and isinstance(exchange.get("user"), str)
+            and isinstance(exchange.get("assistant"), str)
+        ]
+    else:
+        chat_history = []
+except (FileNotFoundError, json.JSONDecodeError):
+    chat_history = []
+
+def save_history():
+    with open(HISTORY_FILE, "w", encoding="utf-8") as history_file:
+        json.dump(chat_history, history_file, ensure_ascii=False, indent=2)
 
 def get_weather(city):
     params = {
@@ -35,6 +56,13 @@ def get_weather(city):
 
 print("Chatbot started! Type 'exit' to stop.\n")
 
+if chat_history:
+    print("Previous chat:")
+    for exchange in chat_history:
+        print(f"You: {exchange['user']}")
+        print(f"Chatbot: {exchange['assistant']}")
+    print()
+
 while True:
     user_input = input("You: ")
 
@@ -49,3 +77,5 @@ while True:
         response = chatbot(user_input, max_length=100, num_return_sequences=1)[0]['generated_text']
 
     print("Chatbot:", response)
+    chat_history.append({"user": user_input, "assistant": response})
+    save_history()
